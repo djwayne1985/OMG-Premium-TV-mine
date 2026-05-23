@@ -325,22 +325,55 @@ const getViewScripts = (protocol, host) => {
             if (hUrl && urlEl) urlEl.value = hUrl.value;
             if (hEn && enEl) enEl.checked = hEn.value === 'true';
         }
+        
         function getConfigQueryString() {
             syncResolverFieldsToForm();
             const form = document.getElementById('configForm');
             const formData = new FormData(form);
             const params = new URLSearchParams();
             
-            formData.forEach(function(value, key) {
-                if (value || key === 'epg_enabled' || key === 'force_proxy' || key === 'resolver_enabled') {
-                    if (key === 'epg_enabled' || key === 'force_proxy' || key === 'resolver_enabled') {
-                        const el = form.elements[key];
-                        params.append(key, el && el.type === 'checkbox' ? el.checked : value);
-                    } else {
-                        params.append(key, value);
-                    }
+            // Process form data
+            for (let [key, value] of formData.entries()) {
+                if (key === 'epg_enabled' || key === 'force_proxy' || key === 'resolver_enabled') {
+                    const el = form.elements[key];
+                    params.append(key, el && el.type === 'checkbox' ? el.checked : value);
+                } else if (value && value.toString().trim() !== '') {
+                    params.append(key, value);
                 }
-            });
+            }
+            
+            // Add resolver fields from the UI if not already in form
+            const resolverScriptUrl = document.getElementById('resolverScriptUrl');
+            const resolverEnabled = document.getElementById('resolverEnabled');
+            const resolverUpdateInterval = document.getElementById('resolverUpdateInterval');
+            
+            if (resolverScriptUrl && resolverScriptUrl.value && !params.has('resolver_script')) {
+                params.append('resolver_script', resolverScriptUrl.value);
+            }
+            if (resolverEnabled && !params.has('resolver_enabled')) {
+                params.append('resolver_enabled', resolverEnabled.checked);
+            }
+            if (resolverUpdateInterval && resolverUpdateInterval.value && !params.has('resolver_update_interval')) {
+                params.append('resolver_update_interval', resolverUpdateInterval.value);
+            }
+            
+            // Add python fields from the UI
+            const pythonScriptUrl = document.getElementById('pythonScriptUrl');
+            const updateInterval = document.getElementById('updateInterval');
+            const hiddenPythonUrl = document.getElementById('hidden_python_script_url');
+            const hiddenPythonInterval = document.getElementById('hidden_python_update_interval');
+            
+            if (pythonScriptUrl && pythonScriptUrl.value && !params.has('python_script_url')) {
+                params.append('python_script_url', pythonScriptUrl.value);
+            } else if (hiddenPythonUrl && hiddenPythonUrl.value && !params.has('python_script_url')) {
+                params.append('python_script_url', hiddenPythonUrl.value);
+            }
+            
+            if (updateInterval && updateInterval.value && !params.has('python_update_interval')) {
+                params.append('python_update_interval', updateInterval.value);
+            } else if (hiddenPythonInterval && hiddenPythonInterval.value && !params.has('python_update_interval')) {
+                params.append('python_update_interval', hiddenPythonInterval.value);
+            }
             
             return params.toString();
         }
@@ -403,6 +436,7 @@ const getViewScripts = (protocol, host) => {
                 return String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65);
             }).join('');
         }
+        
         (function initPresetCountrySelect() {
             var sel = document.getElementById('presetCountry');
             if (!sel) return;
@@ -438,22 +472,82 @@ const getViewScripts = (protocol, host) => {
             document.getElementById('confirmModal').style.display = 'none';
         }
 
-        function proceedInstallation() {
-            const configQueryString = getConfigQueryString();
-            const configBase64 = btoa(configQueryString);
-            window.location.href = 'stremio://' + host + '/' + configBase64 + '/manifest.json';
-            document.getElementById('confirmModal').style.display = 'none';
-        }
-
         function installAddon() {
             showConfirmModal();
         }
 
         function updateConfig(e) {
             e.preventDefault();
-            const configQueryString = getConfigQueryString();
-            const configBase64 = btoa(configQueryString);
-            window.location.href = protocol + '://' + host + '/' + configBase64 + '/configure?generated=1';
+            try {
+                // Get all form data
+                const form = document.getElementById('configForm');
+                const formData = new FormData(form);
+                const params = new URLSearchParams();
+                
+                // Process all form fields
+                for (let [key, value] of formData.entries()) {
+                    if (key === 'epg_enabled' || key === 'force_proxy' || key === 'resolver_enabled') {
+                        const input = form.elements[key];
+                        params.append(key, input && input.type === 'checkbox' ? input.checked : value);
+                    } else if (value && value.toString().trim() !== '') {
+                        params.append(key, value);
+                    }
+                }
+                
+                // Add resolver fields from the UI
+                const resolverScriptUrl = document.getElementById('resolverScriptUrl');
+                const resolverEnabled = document.getElementById('resolverEnabled');
+                const resolverUpdateInterval = document.getElementById('resolverUpdateInterval');
+                
+                if (resolverScriptUrl && resolverScriptUrl.value) {
+                    params.append('resolver_script', resolverScriptUrl.value);
+                }
+                if (resolverEnabled) {
+                    params.append('resolver_enabled', resolverEnabled.checked);
+                }
+                if (resolverUpdateInterval && resolverUpdateInterval.value) {
+                    params.append('resolver_update_interval', resolverUpdateInterval.value);
+                }
+                
+                // Add python script fields from the UI
+                const pythonScriptUrl = document.getElementById('pythonScriptUrl');
+                const updateInterval = document.getElementById('updateInterval');
+                
+                if (pythonScriptUrl && pythonScriptUrl.value) {
+                    params.append('python_script_url', pythonScriptUrl.value);
+                }
+                if (updateInterval && updateInterval.value) {
+                    params.append('python_update_interval', updateInterval.value);
+                }
+                
+                // Also check hidden fields for python settings
+                const hiddenPythonUrl = document.getElementById('hidden_python_script_url');
+                const hiddenPythonInterval = document.getElementById('hidden_python_update_interval');
+                
+                if (hiddenPythonUrl && hiddenPythonUrl.value && !params.has('python_script_url')) {
+                    params.append('python_script_url', hiddenPythonUrl.value);
+                }
+                if (hiddenPythonInterval && hiddenPythonInterval.value && !params.has('python_update_interval')) {
+                    params.append('python_update_interval', hiddenPythonInterval.value);
+                }
+                
+                // Encode and redirect
+                const configQueryString = params.toString();
+                const configBase64 = btoa(configQueryString);
+                
+                // Show loading message
+                showLoader('Generating configuration...');
+                
+                // Redirect to the configured page
+                setTimeout(function() {
+                    window.location.href = protocol + '://' + host + '/' + configBase64 + '/configure?generated=1';
+                }, 100);
+                
+            } catch (error) {
+                hideLoader();
+                console.error('Error generating config:', error);
+                alert('Error generating configuration: ' + error.message);
+            }
         }
 
         function copyManifestUrl() {
@@ -462,12 +556,17 @@ const getViewScripts = (protocol, host) => {
             const manifestUrl = protocol + '://' + host + '/' + configBase64 + '/manifest.json';
             
             navigator.clipboard.writeText(manifestUrl).then(function() {
-                const toast = document.getElementById('toast');
-                toast.style.display = 'block';
-                setTimeout(function() {
-                    toast.style.display = 'none';
-                }, 2000);
+                showToast('Manifest URL copied!');
+            }).catch(function() {
+                alert('Failed to copy URL');
             });
+        }
+
+        function proceedInstallation() {
+            const configQueryString = getConfigQueryString();
+            const configBase64 = btoa(configQueryString);
+            window.location.href = 'stremio://' + host + '/' + configBase64 + '/manifest.json';
+            document.getElementById('confirmModal').style.display = 'none';
         }
 
         async function backupConfig() {
@@ -655,7 +754,7 @@ const getViewScripts = (protocol, host) => {
             html += '<tr><td><strong>' + t('running') + ':</strong>NonNull<td>' + (data.isRunning ? t('yes') : t('no')) + 'NonNull</tr>';
             html += '<tr><td><strong>' + t('last_run') + ':</strong>NonNull<td>' + data.lastExecution + 'NonNull</tr>';
             html += '<tr><td><strong>' + t('script_exists') + ':</strong>NonNull<td>' + (data.scriptExists ? t('yes') : t('no')) + 'NonNull</tr>';
-            html += '<tr><td><strong>' + t('m3u_exists') + ':</strong>NonNull<td>' + (data.m3uExists ? t('yes') : t('no')) + 'NonNull</tr>';
+            html += '<tr><td><strong>' + t('m3u_exists') + ':</strong>NonNull<td>' + (data.m3uExists ? t('yes') : t('no')) + 'NonNull<tr>';
             
             if (data.scheduledUpdates) {
                 html += '<tr><td><strong>' + t('auto_update') + ':</strong>NonNull<td>' + t('auto_update_active') + ' ' + data.updateInterval + 'NonNull</tr>';
@@ -665,7 +764,7 @@ const getViewScripts = (protocol, host) => {
                 html += '<tr><td><strong>' + t('script_url') + ':</strong>NonNull<td>' + data.scriptUrl + 'NonNull</tr>';
             }
             if (data.lastError) {
-                html += '<tr><td><strong>' + t('last_error') + ':</strong>NonNull<td style="color: #ff6666;">' + data.lastError + 'NonNull</table>';
+                html += '<tr><td><strong>' + t('last_error') + ':</strong>NonNull<td style="color: #ff6666;">' + data.lastError + 'NonNull</tr>';
             }
             html += '</table>';
             
@@ -867,7 +966,7 @@ const getViewScripts = (protocol, host) => {
             statusEl.style.display = 'block';
             
             let html = '<table style="width: 100%; text-align: left;">';
-            html += '<tr><td><strong>' + t('running') + ':</strong>NonNull<td>' + (data.isRunning ? t('yes') : t('no')) + 'NonNull</tr>';
+            html += '<tr><td><strong>' + t('running') + ':</strong>NonNull<td>' + (data.isRunning ? t('yes') : t('no')) + 'NonNull</table>';
             html += '<tr><td><strong>' + t('last_run') + ':</strong>NonNull<td>' + data.lastExecution + 'NonNull</tr>';
             html += '<tr><td><strong>' + t('script_exists') + ':</strong>NonNull<td>' + (data.scriptExists ? t('yes') : t('no')) + 'NonNull</tr>';
             
@@ -909,13 +1008,6 @@ const getViewScripts = (protocol, host) => {
             if (enEl) enEl.addEventListener('change', syncResolverFieldsToForm);
             checkResolverStatus();
         }
-        
-        window.addEventListener('DOMContentLoaded', function() {
-            window.applyLanguage(window.currentLang);
-            initializePythonFields();
-            initializeResolverFields();
-            setupLogoPreview();
-        });
 
         async function downloadResolverScript() {
             syncResolverFieldsToForm();
@@ -1193,6 +1285,7 @@ const getViewScripts = (protocol, host) => {
         }
         
         window.addEventListener('DOMContentLoaded', function() {
+            window.applyLanguage(window.currentLang);
             initializePythonFields();
             initializeResolverFields();
             setupLogoPreview();
