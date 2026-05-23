@@ -43,10 +43,9 @@ function renderGatePage(manifest, returnPath) {
 }
 
 const renderConfigPage = (protocol, host, query, manifest, sessionKey = null, showSessionChangeWarning = false) => {
-   // Verifica se il file addon-config.json esiste
+   // Check if addon-config.json exists - this is now just informational
    const configPath = path.join(__dirname, '..', 'addon-config.json');
-   const m3uDefaultUrl = 'https://github.com/mccoy88f/OMG-Premium-TV/blob/main/tv.png?raw=true';
-   const m3uIsDisabled = !fs.existsSync(configPath);
+   const configExists = fs.existsSync(configPath);
    const sessionIdDisplay = sessionKey || '—';
 
    return `
@@ -382,9 +381,7 @@ const renderConfigPage = (protocol, host, query, manifest, sessionKey = null, sh
                    <form id="configForm" onsubmit="updateConfig(event)">
                        <label data-i18n="m3u_url">M3U URL:</label>
                        <input type="text" name="m3u" 
-                              value="${m3uIsDisabled ? m3uDefaultUrl : (query.m3u || '')}" 
-                              ${m3uIsDisabled ? 'readonly' : ''} 
-                              data-i18n-placeholder="m3u_placeholder"
+                              value="${query.m3u || ''}" 
                               placeholder="https://example.com/playlist1.m3u,https://example.com/playlist2.m3u"
                               required>
                        <small style="color: #999; display: block; margin-top: 5px;" data-i18n="m3u_hint">
@@ -394,7 +391,6 @@ const renderConfigPage = (protocol, host, query, manifest, sessionKey = null, sh
                        <label data-i18n="epg_url">EPG URL:</label>
                        <input type="text" name="epg" 
                               value="${query.epg || ''}"
-                              data-i18n-placeholder="epg_placeholder"
                               placeholder="https://example.com/epg1.xml,https://example.com/epg2.xml">
                        <small style="color: #999; display: block; margin-top: 5px;" data-i18n="epg_hint">
                            💡 You can enter multiple EPG URLs separated by a comma (,)
@@ -441,13 +437,13 @@ const renderConfigPage = (protocol, host, query, manifest, sessionKey = null, sh
                                </label>
 
                                <label data-i18n="id_suffix">ID suffix:</label>
-                               <input type="text" name="id_suffix" value="${query.id_suffix || ''}" data-i18n-placeholder="id_suffix_placeholder" placeholder="Example: it">
+                               <input type="text" name="id_suffix" value="${query.id_suffix || ''}" placeholder="Example: it">
 
                                <label data-i18n="remapper_path">Remapper file path:</label>
-                               <input type="text" name="remapper_path" value="${query.remapper_path || ''}" data-i18n-placeholder="remapper_placeholder" placeholder="Example: https://raw.githubusercontent.com/...">
+                               <input type="text" name="remapper_path" value="${query.remapper_path || ''}" placeholder="Example: https://raw.githubusercontent.com/...">
 
                                <label data-i18n="update_interval">Playlist update interval:</label>
-                               <input type="text" name="update_interval" value="${query.update_interval || '12:00'}" data-i18n-placeholder="update_interval_placeholder" placeholder="HH:MM (default 12:00)">
+                               <input type="text" name="update_interval" value="${query.update_interval || '12:00'}" placeholder="HH:MM (default 12:00)">
                                <small style="color: #999;" data-i18n="update_interval_hint">Format HH:MM (e.g. 1:00 or 01:00), default 12:00</small>
                                
                            </div>
@@ -499,9 +495,9 @@ const renderConfigPage = (protocol, host, query, manifest, sessionKey = null, sh
                                </div>
                                <div id="homeAuthFields" style="margin-top: 10px; display: none;">
                                    <label data-i18n="password">Password:</label>
-                                   <input type="password" id="homeAuthPassword" data-i18n-placeholder="new_password" placeholder="New password">
+                                   <input type="password" id="homeAuthPassword" placeholder="New password">
                                    <label data-i18n="confirm_password">Confirm password:</label>
-                                   <input type="password" id="homeAuthConfirm" data-i18n-placeholder="confirm_password" placeholder="Confirm password">
+                                   <input type="password" id="homeAuthConfirm" placeholder="Confirm password">
                                    <button type="button" onclick="saveHomeAuth()" style="margin-top: 10px;" data-i18n="save_protection">Save protection</button>
                                    <button type="button" id="homeAuthCancelBtn" onclick="cancelEditHomeAuth()" style="margin-left: 10px; background: #666;" data-i18n="cancel">Cancel</button>
                                    <span id="homeAuthMessage" style="margin-left: 10px; font-size: 14px;"></span>
@@ -530,7 +526,7 @@ const renderConfigPage = (protocol, host, query, manifest, sessionKey = null, sh
             
                            <div id="pythonForm">
                                <label data-i18n="python_script_url">Python script URL:</label>
-                               <input type="url" id="pythonScriptUrl" data-i18n-placeholder="python_script_placeholder" placeholder="https://example.com/script.py">
+                               <input type="url" id="pythonScriptUrl" placeholder="https://example.com/script.py">
                 
                                <div style="display: flex; gap: 10px; margin-top: 15px;">
                                    <button onclick="downloadPythonScript()" style="flex: 1;" data-i18n="download_script">DOWNLOAD SCRIPT</button>
@@ -575,7 +571,7 @@ const renderConfigPage = (protocol, host, query, manifest, sessionKey = null, sh
                        <div class="advanced-settings-content" id="resolver-section-content">
                            <div style="margin-bottom: 1rem;">
                                <label data-i18n="resolver_script">Python Resolver script URL:</label>
-                               <input type="url" id="resolverScriptUrl" value="${query.resolver_script || ''}" data-i18n-placeholder="resolver_script_placeholder" placeholder="https://example.com/resolver.py" style="width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #666; background: #333; color: white;">
+                               <input type="url" id="resolverScriptUrl" value="${query.resolver_script || ''}" placeholder="https://example.com/resolver.py" style="width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #666; background: #333; color: white;">
                                <label style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
                                    <input type="checkbox" id="resolverEnabled" ${query.resolver_enabled === 'true' ? 'checked' : ''}>
                                    <span data-i18n="resolver_enabled">Enable Python Resolver</span>
