@@ -31,40 +31,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Ensure addon-config.json exists
-function ensureAddonConfigExists() {
-    const configPath = path.join(__dirname, 'addon-config.json');
-    
-    if (!fs.existsSync(configPath)) {
-        const defaultConfig = {
-            addonName: "AI Media TV",
-            addonId: "org.mccoy88f.omgtv",
-            addonDescription: "Modalita provvisoria, installazione con errori, attivo mod. provvisoria",
-            addonVersion: "7.0.0",
-            addonLogo: "https://github.com/mccoy88f/OMG-TV-Stremio-Addon/blob/main/tv.png?raw=true",
-            defaultLanguage: "English"
-        };
-        
-        fs.writeFileSync(configPath, JSON.stringify(defaultConfig, null, 2));
-        logger.log('_', 'Created addon-config.json with default settings');
-    }
-}
-
-function ensureAddonSettingsExists() {
-    const settingsPath = path.join(__dirname, 'addon-settings.json');
-    
-    if (!fs.existsSync(settingsPath)) {
-        const defaultSettings = {
-            addonName: "AI Media TV",
-            addonDescription: "Modalita provvisoria, installazione con errori, attivo mod. provvisoria",
-            addonLogo: "https://github.com/mccoy88f/OMG-TV-Stremio-Addon/blob/main/tv.png?raw=true"
-        };
-        
-        fs.writeFileSync(settingsPath, JSON.stringify(defaultSettings, null, 2));
-        logger.log('_', 'Created addon-settings.json with default settings');
-    }
-}
-
 // Chiave cache derivata dalla config (stessa config = stessa cache; nessun session_id scelto dall'utente)
 function getSessionKeyFromConfig(userConfig) {
     if (!userConfig || typeof userConfig !== 'object') return '_default';
@@ -158,105 +124,114 @@ app.post('/api/session-key', (req, res) => {
     }
 });
 
-// API to update addon settings (name, description, logo)
-app.post('/api/update-addon-settings', async (req, res) => {
-    try {
-        const { addonName, addonDescription, addonLogo } = req.body;
-        
-        if (!addonName || addonName.trim() === '') {
-            return res.status(400).json({ success: false, message: 'Addon name is required' });
-        }
-        
-        // Save to settings file
-        const settingsPath = path.join(__dirname, 'addon-settings.json');
-        let settings = {};
-        
-        if (fs.existsSync(settingsPath)) {
-            settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-        }
-        
-        settings.addonName = addonName.trim();
-        settings.addonDescription = addonDescription || 'Modalita provvisoria, installazione con errori, attivo mod. provvisoria';
-        settings.addonLogo = addonLogo || 'https://github.com/mccoy88f/OMG-TV-Stremio-Addon/blob/main/tv.png?raw=true';
-        fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
-        
-        // Update the manifest in memory for immediate effect
-        const configModule = require('./src/config');
-        if (configModule && configModule.manifest) {
-            configModule.manifest.name = addonName.trim();
-            configModule.manifest.description = settings.addonDescription;
-            configModule.manifest.logo = settings.addonLogo;
-            if (configModule.manifest.catalogs && configModule.manifest.catalogs[0]) {
-                configModule.manifest.catalogs[0].name = addonName.trim();
-            }
-        }
-        
-        res.json({ 
-            success: true, 
-            message: 'Addon settings updated successfully. Please reinstall the addon in Stremio for the changes to take effect.',
-            settings: settings
-        });
-        
-    } catch (error) {
-        logger.error('_', 'Error updating addon settings:', error.message);
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-// API to get current addon settings
-app.get('/api/get-addon-settings', async (req, res) => {
-    try {
-        const settingsPath = path.join(__dirname, 'addon-settings.json');
-        let settings = {
-            addonName: 'AI Media TV',
-            addonDescription: 'Modalita provvisoria, installazione con errori, attivo mod. provvisoria',
-            addonLogo: 'https://github.com/mccoy88f/OMG-TV-Stremio-Addon/blob/main/tv.png?raw=true'
-        };
-        
-        if (fs.existsSync(settingsPath)) {
-            const savedSettings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-            settings = { ...settings, ...savedSettings };
-        }
-        
-        res.json({ success: true, settings });
-    } catch (error) {
-        logger.error('_', 'Error getting addon settings:', error.message);
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-// API to create addon-config.json if missing
-app.post('/api/create-config', async (req, res) => {
+// API to get addon-config.json content
+app.get('/api/get-addon-config', async (req, res) => {
     try {
         const configPath = path.join(__dirname, 'addon-config.json');
         
-        if (fs.existsSync(configPath)) {
+        if (!fs.existsSync(configPath)) {
             return res.json({ 
-                success: true, 
-                message: 'Config file already exists',
-                exists: true
+                success: false, 
+                error: 'File not found',
+                content: null
             });
         }
         
-        const defaultConfig = {
-            addonName: "AI Media TV",
-            addonId: "org.mccoy88f.omgtv",
-            addonDescription: "Modalita provvisoria, installazione con errori, attivo mod. provvisoria",
-            addonVersion: "7.0.0",
-            addonLogo: "https://github.com/mccoy88f/OMG-TV-Stremio-Addon/blob/main/tv.png?raw=true",
-            defaultLanguage: "English"
-        };
-        
-        fs.writeFileSync(configPath, JSON.stringify(defaultConfig, null, 2));
+        const content = fs.readFileSync(configPath, 'utf8');
+        const configData = JSON.parse(content);
         
         res.json({ 
             success: true, 
-            message: 'Config file created successfully',
-            exists: true
+            config: configData,
+            raw: content
         });
     } catch (error) {
-        logger.error('_', 'Error creating config:', error.message);
-        res.status(500).json({ success: false, message: error.message });
+        logger.error('_', 'Error reading addon-config.json:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// API to save addon-config.json
+app.post('/api/save-addon-config', async (req, res) => {
+    try {
+        const { config } = req.body;
+        const configPath = path.join(__dirname, 'addon-config.json');
+        
+        if (!config || typeof config !== 'object') {
+            return res.status(400).json({ success: false, error: 'Invalid config data' });
+        }
+        
+        // Validate required fields
+        if (!config.addonName || !config.addonId) {
+            return res.status(400).json({ success: false, error: 'Missing required fields: addonName, addonId' });
+        }
+        
+        fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+        
+        // Reload config module
+        delete require.cache[require.resolve('./src/config')];
+        const newConfig = require('./src/config');
+        
+        res.json({ 
+            success: true, 
+            message: 'addon-config.json saved successfully. Restart may be required for all changes to take effect.'
+        });
+    } catch (error) {
+        logger.error('_', 'Error saving addon-config.json:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// API to get addon-settings.json content
+app.get('/api/get-addon-settings', async (req, res) => {
+    try {
+        const settingsPath = path.join(__dirname, 'addon-settings.json');
+        
+        if (!fs.existsSync(settingsPath)) {
+            return res.json({ 
+                success: false, 
+                error: 'File not found',
+                content: null
+            });
+        }
+        
+        const content = fs.readFileSync(settingsPath, 'utf8');
+        const settingsData = JSON.parse(content);
+        
+        res.json({ 
+            success: true, 
+            settings: settingsData,
+            raw: content
+        });
+    } catch (error) {
+        logger.error('_', 'Error reading addon-settings.json:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// API to save addon-settings.json
+app.post('/api/save-addon-settings', async (req, res) => {
+    try {
+        const { settings } = req.body;
+        const settingsPath = path.join(__dirname, 'addon-settings.json');
+        
+        if (!settings || typeof settings !== 'object') {
+            return res.status(400).json({ success: false, error: 'Invalid settings data' });
+        }
+        
+        fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+        
+        // Reload config module
+        delete require.cache[require.resolve('./src/config')];
+        const newConfig = require('./src/config');
+        
+        res.json({ 
+            success: true, 
+            message: 'addon-settings.json saved successfully.'
+        });
+    } catch (error) {
+        logger.error('_', 'Error saving addon-settings.json:', error.message);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -872,10 +847,6 @@ app.post('/api/python-script', async (req, res) => {
 });
 
 async function startAddon() {
-    // Ensure config files exist
-    ensureAddonConfigExists();
-    ensureAddonSettingsExists();
-    
     cleanupTempFolder();
 
     // Inizializza CacheManager di default (per compatibilità e python-runner)

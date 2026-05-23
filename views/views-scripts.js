@@ -83,131 +83,147 @@ const getViewScripts = (protocol, host) => {
             }
         }
 
-        function toggleAddonCustomization() {
-            const content = document.getElementById('addon-customization-content');
-            const toggle = document.getElementById('addon-customization-toggle');
+        function toggleJsonEditor() {
+            const content = document.getElementById('json-editor-content');
+            const toggle = document.getElementById('json-editor-toggle');
             if (content && toggle) {
                 content.classList.toggle('show');
                 toggle.textContent = content.classList.contains('show') ? '▲' : '▼';
             }
         }
 
-        // Logo preview function
-        function setupLogoPreview() {
-            const logoInput = document.getElementById('addonLogoInput');
-            const logoPreview = document.getElementById('logoPreview');
-            if (logoInput && logoPreview) {
-                logoInput.addEventListener('input', function() {
-                    logoPreview.src = this.value || 'https://github.com/mccoy88f/OMG-TV-Stremio-Addon/blob/main/tv.png?raw=true';
-                });
+        // JSON Editor functions
+        async function loadConfigJson() {
+            showLoader('Loading config file...');
+            const msgDiv = document.getElementById('configJsonMessage');
+            try {
+                const response = await fetch('/api/get-addon-config');
+                const result = await response.json();
+                hideLoader();
+                
+                if (result.success && result.config) {
+                    document.getElementById('configJsonEditor').value = JSON.stringify(result.config, null, 2);
+                    msgDiv.innerHTML = '<span style="color: #4CAF50;">✓ Config loaded successfully</span>';
+                    setTimeout(() => { msgDiv.innerHTML = ''; }, 3000);
+                } else {
+                    msgDiv.innerHTML = '<span style="color: #f44336;">✗ Error: ' + (result.error || 'Failed to load') + '</span>';
+                }
+            } catch (error) {
+                hideLoader();
+                msgDiv.innerHTML = '<span style="color: #f44336;">✗ Error: ' + error.message + '</span>';
             }
         }
 
-        // Create config file function
-        async function createConfigFile() {
-            showLoader('Creating configuration file...');
+        async function saveConfigJson() {
+            const editor = document.getElementById('configJsonEditor');
+            const msgDiv = document.getElementById('configJsonMessage');
             
             try {
-                const response = await fetch('/api/create-config', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
+                const configData = JSON.parse(editor.value);
                 
+                // Validate required fields
+                if (!configData.addonName || !configData.addonId) {
+                    throw new Error('Missing required fields: addonName, addonId');
+                }
+                
+                showLoader('Saving config file...');
+                const response = await fetch('/api/save-addon-config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ config: configData })
+                });
                 const result = await response.json();
                 hideLoader();
                 
                 if (result.success) {
-                    showToast('Config file created successfully! Refreshing page...');
-                    setTimeout(function() {
+                    msgDiv.innerHTML = '<span style="color: #4CAF50;">✓ Config saved successfully! Page will reload...</span>';
+                    setTimeout(() => {
                         window.location.reload();
                     }, 1500);
                 } else {
-                    showToast('Error: ' + result.message, 'error');
+                    msgDiv.innerHTML = '<span style="color: #f44336;">✗ Error: ' + (result.error || 'Failed to save') + '</span>';
                 }
             } catch (error) {
                 hideLoader();
-                showToast('Error creating config: ' + error.message, 'error');
+                msgDiv.innerHTML = '<span style="color: #f44336;">✗ Invalid JSON: ' + error.message + '</span>';
             }
         }
 
-        // Update addon settings function
-        async function updateAddonSettings() {
-            const addonName = document.getElementById('addonNameInput').value.trim();
-            const addonDescription = document.getElementById('addonDescriptionInput').value.trim();
-            const addonLogo = document.getElementById('addonLogoInput').value.trim();
-            
-            if (!addonName) {
-                showToast('Please enter an addon name', 'error');
-                return;
-            }
-            
-            showLoader('Updating addon settings...');
-            
+        async function resetConfigJson() {
+            const defaultConfig = {
+                addonName: "AI Media TV",
+                addonId: "org.mccoy88f.omgtv",
+                addonDescription: "Modalita provvisoria, installazione con errori, attivo mod. provvisoria",
+                addonVersion: "7.0.0",
+                addonLogo: "https://github.com/mccoy88f/OMG-TV-Stremio-Addon/blob/main/tv.png?raw=true",
+                defaultLanguage: "English"
+            };
+            document.getElementById('configJsonEditor').value = JSON.stringify(defaultConfig, null, 2);
+            const msgDiv = document.getElementById('configJsonMessage');
+            msgDiv.innerHTML = '<span style="color: #ff9800;">⚠ Reset to default. Click Save to apply.</span>';
+            setTimeout(() => { msgDiv.innerHTML = ''; }, 3000);
+        }
+
+        async function loadSettingsJson() {
+            showLoader('Loading settings file...');
+            const msgDiv = document.getElementById('settingsJsonMessage');
             try {
-                const response = await fetch('/api/update-addon-settings', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ 
-                        addonName: addonName,
-                        addonDescription: addonDescription,
-                        addonLogo: addonLogo
-                    })
-                });
-                
+                const response = await fetch('/api/get-addon-settings');
                 const result = await response.json();
+                hideLoader();
                 
-                if (result.success) {
-                    // Update the displayed name, description, and logo on the page
-                    const addonNameDisplay = document.getElementById('addonNameDisplay');
-                    const addonDescriptionDisplay = document.getElementById('addonDescriptionDisplay');
-                    const addonLogoImg = document.getElementById('addonLogo');
-                    const logoPreview = document.getElementById('logoPreview');
-                    
-                    if (addonNameDisplay) {
-                        const versionSpan = addonNameDisplay.querySelector('span');
-                        if (versionSpan) {
-                            addonNameDisplay.innerHTML = result.settings.addonName + ' <span style="font-size: 16px; color: #aaa;">' + versionSpan.innerText + '</span>';
-                        } else {
-                            addonNameDisplay.textContent = result.settings.addonName;
-                        }
-                    }
-                    
-                    if (addonDescriptionDisplay) {
-                        addonDescriptionDisplay.textContent = result.settings.addonDescription;
-                    }
-                    
-                    if (addonLogoImg) {
-                        addonLogoImg.src = result.settings.addonLogo;
-                    }
-                    
-                    if (logoPreview) {
-                        logoPreview.src = result.settings.addonLogo;
-                    }
-                    
-                    // Update the page title
-                    document.title = result.settings.addonName;
-                    
-                    // Show success message with reinstall instructions
-                    showToast('Addon settings updated successfully!');
-                    
-                    setTimeout(function() {
-                        if (confirm('Addon settings updated successfully!\\n\\nTo see the changes in Stremio, you need to:\\n1. Remove the current addon from Stremio\\n2. Reinstall the addon using the same installation link\\n\\nDo you want to copy the installation URL now?')) {
-                            copyManifestUrl();
-                        }
-                    }, 500);
+                if (result.success && result.settings) {
+                    document.getElementById('settingsJsonEditor').value = JSON.stringify(result.settings, null, 2);
+                    msgDiv.innerHTML = '<span style="color: #4CAF50;">✓ Settings loaded successfully</span>';
+                    setTimeout(() => { msgDiv.innerHTML = ''; }, 3000);
                 } else {
-                    showToast('Error: ' + result.message, 'error');
+                    msgDiv.innerHTML = '<span style="color: #f44336;">✗ Error: ' + (result.error || 'Failed to load') + '</span>';
                 }
             } catch (error) {
-                console.error('Error updating addon settings:', error);
-                showToast('Error updating addon settings: ' + error.message, 'error');
-            } finally {
                 hideLoader();
+                msgDiv.innerHTML = '<span style="color: #f44336;">✗ Error: ' + error.message + '</span>';
             }
+        }
+
+        async function saveSettingsJson() {
+            const editor = document.getElementById('settingsJsonEditor');
+            const msgDiv = document.getElementById('settingsJsonMessage');
+            
+            try {
+                const settingsData = JSON.parse(editor.value);
+                showLoader('Saving settings file...');
+                const response = await fetch('/api/save-addon-settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ settings: settingsData })
+                });
+                const result = await response.json();
+                hideLoader();
+                
+                if (result.success) {
+                    msgDiv.innerHTML = '<span style="color: #4CAF50;">✓ Settings saved successfully! Page will reload...</span>';
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    msgDiv.innerHTML = '<span style="color: #f44336;">✗ Error: ' + (result.error || 'Failed to save') + '</span>';
+                }
+            } catch (error) {
+                hideLoader();
+                msgDiv.innerHTML = '<span style="color: #f44336;">✗ Invalid JSON: ' + error.message + '</span>';
+            }
+        }
+
+        async function resetSettingsJson() {
+            const defaultSettings = {
+                addonName: "AI Media TV",
+                addonDescription: "Modalita provvisoria, installazione con errori, attivo mod. provvisoria",
+                addonLogo: "https://github.com/mccoy88f/OMG-TV-Stremio-Addon/blob/main/tv.png?raw=true"
+            };
+            document.getElementById('settingsJsonEditor').value = JSON.stringify(defaultSettings, null, 2);
+            const msgDiv = document.getElementById('settingsJsonMessage');
+            msgDiv.innerHTML = '<span style="color: #ff9800;">⚠ Reset to default. Click Save to apply.</span>';
+            setTimeout(() => { msgDiv.innerHTML = ''; }, 3000);
         }
 
         // Proteggi accesso alla home
@@ -216,7 +232,7 @@ const getViewScripts = (protocol, host) => {
             const whenEnabled = document.getElementById('homeAuthWhenEnabled');
             const fields = document.getElementById('homeAuthFields');
             if (!cb || !whenEnabled || !fields) return;
-            fetch('/api/home-auth/status').then(function(r) { return r.json(); }).then(function(data) {
+            fetch('/api/home-auth/status').then(r => r.json()).then(function(data) {
                 cb.checked = data.enabled;
                 whenEnabled.style.display = data.enabled ? 'block' : 'none';
                 fields.style.display = 'none';
@@ -231,28 +247,6 @@ const getViewScripts = (protocol, host) => {
                 }
             });
         })();
-        
-        // Load addon settings on page load
-        (async function loadAddonSettings() {
-            try {
-                const response = await fetch('/api/get-addon-settings');
-                const result = await response.json();
-                if (result.success) {
-                    const nameInput = document.getElementById('addonNameInput');
-                    const descInput = document.getElementById('addonDescriptionInput');
-                    const logoInput = document.getElementById('addonLogoInput');
-                    const logoPreview = document.getElementById('logoPreview');
-                    
-                    if (nameInput) nameInput.value = result.settings.addonName;
-                    if (descInput) descInput.value = result.settings.addonDescription;
-                    if (logoInput) logoInput.value = result.settings.addonLogo;
-                    if (logoPreview) logoPreview.src = result.settings.addonLogo;
-                }
-            } catch (error) {
-                console.error('Error loading addon settings:', error);
-            }
-        })();
-        
         function toggleEditHomeAuth() {
             document.getElementById('homeAuthFields').style.display = 'block';
             document.getElementById('homeAuthWhenEnabled').style.display = 'none';
@@ -325,55 +319,22 @@ const getViewScripts = (protocol, host) => {
             if (hUrl && urlEl) urlEl.value = hUrl.value;
             if (hEn && enEl) enEl.checked = hEn.value === 'true';
         }
-        
         function getConfigQueryString() {
             syncResolverFieldsToForm();
             const form = document.getElementById('configForm');
             const formData = new FormData(form);
             const params = new URLSearchParams();
             
-            // Process form data
-            for (let [key, value] of formData.entries()) {
-                if (key === 'epg_enabled' || key === 'force_proxy' || key === 'resolver_enabled') {
-                    const el = form.elements[key];
-                    params.append(key, el && el.type === 'checkbox' ? el.checked : value);
-                } else if (value && value.toString().trim() !== '') {
-                    params.append(key, value);
+            formData.forEach((value, key) => {
+                if (value || key === 'epg_enabled' || key === 'force_proxy' || key === 'resolver_enabled') {
+                    if (key === 'epg_enabled' || key === 'force_proxy' || key === 'resolver_enabled') {
+                        const el = form.elements[key];
+                        params.append(key, el && el.type === 'checkbox' ? el.checked : value);
+                    } else {
+                        params.append(key, value);
+                    }
                 }
-            }
-            
-            // Add resolver fields from the UI if not already in form
-            const resolverScriptUrl = document.getElementById('resolverScriptUrl');
-            const resolverEnabled = document.getElementById('resolverEnabled');
-            const resolverUpdateInterval = document.getElementById('resolverUpdateInterval');
-            
-            if (resolverScriptUrl && resolverScriptUrl.value && !params.has('resolver_script')) {
-                params.append('resolver_script', resolverScriptUrl.value);
-            }
-            if (resolverEnabled && !params.has('resolver_enabled')) {
-                params.append('resolver_enabled', resolverEnabled.checked);
-            }
-            if (resolverUpdateInterval && resolverUpdateInterval.value && !params.has('resolver_update_interval')) {
-                params.append('resolver_update_interval', resolverUpdateInterval.value);
-            }
-            
-            // Add python fields from the UI
-            const pythonScriptUrl = document.getElementById('pythonScriptUrl');
-            const updateInterval = document.getElementById('updateInterval');
-            const hiddenPythonUrl = document.getElementById('hidden_python_script_url');
-            const hiddenPythonInterval = document.getElementById('hidden_python_update_interval');
-            
-            if (pythonScriptUrl && pythonScriptUrl.value && !params.has('python_script_url')) {
-                params.append('python_script_url', pythonScriptUrl.value);
-            } else if (hiddenPythonUrl && hiddenPythonUrl.value && !params.has('python_script_url')) {
-                params.append('python_script_url', hiddenPythonUrl.value);
-            }
-            
-            if (updateInterval && updateInterval.value && !params.has('python_update_interval')) {
-                params.append('python_update_interval', updateInterval.value);
-            } else if (hiddenPythonInterval && hiddenPythonInterval.value && !params.has('python_update_interval')) {
-                params.append('python_update_interval', hiddenPythonInterval.value);
-            }
+            });
             
             return params.toString();
         }
@@ -436,7 +397,6 @@ const getViewScripts = (protocol, host) => {
                 return String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65);
             }).join('');
         }
-        
         (function initPresetCountrySelect() {
             var sel = document.getElementById('presetCountry');
             if (!sel) return;
@@ -472,101 +432,36 @@ const getViewScripts = (protocol, host) => {
             document.getElementById('confirmModal').style.display = 'none';
         }
 
+        function proceedInstallation() {
+            const configQueryString = getConfigQueryString();
+            const configBase64 = btoa(configQueryString);
+            window.location.href = \`stremio://${host}/\${configBase64}/manifest.json\`;
+            document.getElementById('confirmModal').style.display = 'none';
+        }
+
         function installAddon() {
             showConfirmModal();
         }
 
         function updateConfig(e) {
             e.preventDefault();
-            try {
-                // Get all form data
-                const form = document.getElementById('configForm');
-                const formData = new FormData(form);
-                const params = new URLSearchParams();
-                
-                // Process all form fields
-                for (let [key, value] of formData.entries()) {
-                    if (key === 'epg_enabled' || key === 'force_proxy' || key === 'resolver_enabled') {
-                        const input = form.elements[key];
-                        params.append(key, input && input.type === 'checkbox' ? input.checked : value);
-                    } else if (value && value.toString().trim() !== '') {
-                        params.append(key, value);
-                    }
-                }
-                
-                // Add resolver fields from the UI
-                const resolverScriptUrl = document.getElementById('resolverScriptUrl');
-                const resolverEnabled = document.getElementById('resolverEnabled');
-                const resolverUpdateInterval = document.getElementById('resolverUpdateInterval');
-                
-                if (resolverScriptUrl && resolverScriptUrl.value) {
-                    params.append('resolver_script', resolverScriptUrl.value);
-                }
-                if (resolverEnabled) {
-                    params.append('resolver_enabled', resolverEnabled.checked);
-                }
-                if (resolverUpdateInterval && resolverUpdateInterval.value) {
-                    params.append('resolver_update_interval', resolverUpdateInterval.value);
-                }
-                
-                // Add python script fields from the UI
-                const pythonScriptUrl = document.getElementById('pythonScriptUrl');
-                const updateInterval = document.getElementById('updateInterval');
-                
-                if (pythonScriptUrl && pythonScriptUrl.value) {
-                    params.append('python_script_url', pythonScriptUrl.value);
-                }
-                if (updateInterval && updateInterval.value) {
-                    params.append('python_update_interval', updateInterval.value);
-                }
-                
-                // Also check hidden fields for python settings
-                const hiddenPythonUrl = document.getElementById('hidden_python_script_url');
-                const hiddenPythonInterval = document.getElementById('hidden_python_update_interval');
-                
-                if (hiddenPythonUrl && hiddenPythonUrl.value && !params.has('python_script_url')) {
-                    params.append('python_script_url', hiddenPythonUrl.value);
-                }
-                if (hiddenPythonInterval && hiddenPythonInterval.value && !params.has('python_update_interval')) {
-                    params.append('python_update_interval', hiddenPythonInterval.value);
-                }
-                
-                // Encode and redirect
-                const configQueryString = params.toString();
-                const configBase64 = btoa(configQueryString);
-                
-                // Show loading message
-                showLoader('Generating configuration...');
-                
-                // Redirect to the configured page
-                setTimeout(function() {
-                    window.location.href = protocol + '://' + host + '/' + configBase64 + '/configure?generated=1';
-                }, 100);
-                
-            } catch (error) {
-                hideLoader();
-                console.error('Error generating config:', error);
-                alert('Error generating configuration: ' + error.message);
-            }
+            const configQueryString = getConfigQueryString();
+            const configBase64 = btoa(configQueryString);
+            window.location.href = \`${protocol}://${host}/\${configBase64}/configure?generated=1\`;
         }
 
         function copyManifestUrl() {
             const configQueryString = getConfigQueryString();
             const configBase64 = btoa(configQueryString);
-            const manifestUrl = protocol + '://' + host + '/' + configBase64 + '/manifest.json';
+            const manifestUrl = \`${protocol}://${host}/\${configBase64}/manifest.json\`;
             
-            navigator.clipboard.writeText(manifestUrl).then(function() {
-                showToast('Manifest URL copied!');
-            }).catch(function() {
-                alert('Failed to copy URL');
+            navigator.clipboard.writeText(manifestUrl).then(() => {
+                const toast = document.getElementById('toast');
+                toast.style.display = 'block';
+                setTimeout(() => {
+                    toast.style.display = 'none';
+                }, 2000);
             });
-        }
-
-        function proceedInstallation() {
-            const configQueryString = getConfigQueryString();
-            const configBase64 = btoa(configQueryString);
-            window.location.href = 'stremio://' + host + '/' + configBase64 + '/manifest.json';
-            document.getElementById('confirmModal').style.display = 'none';
         }
 
         async function backupConfig() {
@@ -578,7 +473,8 @@ const getViewScripts = (protocol, host) => {
             params.resolver_enabled = params.resolver_enabled === 'true';
             params.resolver_update_interval = 
                 document.getElementById('resolverUpdateInterval').value || 
-                (document.querySelector('input[name="resolver_update_interval"]')?.value || '');
+                document.querySelector('input[name="resolver_update_interval"]')?.value || 
+                '';
             try {
                 const r = await fetch('/api/session-key', {
                     method: 'POST',
@@ -627,6 +523,7 @@ const getViewScripts = (protocol, host) => {
                     if (config.resolver_update_interval) {
                         document.getElementById('resolverUpdateInterval').value = config.resolver_update_interval;
                     
+                        // Crea un campo nascosto nel form se non esiste già
                         let hiddenField = document.querySelector('input[name="resolver_update_interval"]');
                         if (!hiddenField) {
                             hiddenField = document.createElement('input');
@@ -635,8 +532,10 @@ const getViewScripts = (protocol, host) => {
                             document.getElementById('configForm').appendChild(hiddenField);
                         }
                         
+                        // Imposta il valore nel campo nascosto
                         hiddenField.value = config.resolver_update_interval;
                     
+                        // Pianifica l'aggiornamento del resolver
                         await fetch('/api/resolver', {
                             method: 'POST',
                             headers: {
@@ -650,9 +549,11 @@ const getViewScripts = (protocol, host) => {
                         });
                     }
                     
+                    // Ripristina anche i campi Python negli input visibili dell'interfaccia
                     if (config.python_script_url) {
                         document.getElementById('pythonScriptUrl').value = config.python_script_url;
         
+                        // Scarica lo script Python
                         const downloadResponse = await fetch('/api/python-script', {
                             method: 'POST',
                             headers: {
@@ -670,6 +571,7 @@ const getViewScripts = (protocol, host) => {
                             throw new Error(t('error_script_download'));
                         }
         
+                        // Esegui lo script Python
                         const executeResponse = await fetch('/api/python-script', {
                             method: 'POST',
                             headers: {
@@ -690,9 +592,11 @@ const getViewScripts = (protocol, host) => {
                         showM3uUrl(executeData.m3uUrl);
                     }
         
+                    // Gestisci l'intervallo di aggiornamento
                     if (config.python_update_interval) {
                         document.getElementById('updateInterval').value = config.python_update_interval;
         
+                        // Pianifica l'aggiornamento se presente
                         await fetch('/api/python-script', {
                             method: 'POST',
                             headers: {
@@ -706,6 +610,7 @@ const getViewScripts = (protocol, host) => {
                         });
                     }
 
+                    // NUOVO: Avvia esplicitamente la ricostruzione della cache
                     if (config.m3u) {
                         try {
                             const rebuildResponse = await fetch('/api/rebuild-cache', {
@@ -730,9 +635,10 @@ const getViewScripts = (protocol, host) => {
         
                     hideLoader();
                     
+                    // Aggiorna la pagina solo dopo che tutte le operazioni sono state completate
                     const configQueryString = getConfigQueryString();
                     const configBase64 = btoa(configQueryString);
-                    window.location.href = protocol + '://' + host + '/' + configBase64 + '/configure';
+                    window.location.href = \`${protocol}://${host}/\${configBase64}/configure\`;
         
                 } catch (error) {
                     hideLoader();
@@ -754,8 +660,9 @@ const getViewScripts = (protocol, host) => {
             html += '<tr><td><strong>' + t('running') + ':</strong>NonNull<td>' + (data.isRunning ? t('yes') : t('no')) + 'NonNull</tr>';
             html += '<tr><td><strong>' + t('last_run') + ':</strong>NonNull<td>' + data.lastExecution + 'NonNull</tr>';
             html += '<tr><td><strong>' + t('script_exists') + ':</strong>NonNull<td>' + (data.scriptExists ? t('yes') : t('no')) + 'NonNull</tr>';
-            html += '<tr><td><strong>' + t('m3u_exists') + ':</strong>NonNull<td>' + (data.m3uExists ? t('yes') : t('no')) + 'NonNull<tr>';
+            html += '<tr><td><strong>' + t('m3u_exists') + ':</strong>NonNull<td>' + (data.m3uExists ? t('yes') : t('no')) + 'NonNull</tr>';
             
+            // Aggiungi informazioni sull'aggiornamento pianificato
             if (data.scheduledUpdates) {
                 html += '<tr><td><strong>' + t('auto_update') + ':</strong>NonNull<td>' + t('auto_update_active') + ' ' + data.updateInterval + 'NonNull</tr>';
             }
@@ -786,6 +693,7 @@ const getViewScripts = (protocol, host) => {
                 return;
             }
             
+            // Salva l'URL nel campo nascosto del form
             document.getElementById('hidden_python_script_url').value = url;
             
             try {
@@ -888,9 +796,11 @@ const getViewScripts = (protocol, host) => {
             } catch (e) {}
             document.querySelector('input[name="m3u"]').value = m3uUrl;
             
+            // Ottieni i valori attuali dai campi
             const pythonScriptUrl = document.getElementById('pythonScriptUrl').value;
             const updateInterval = document.getElementById('updateInterval').value;
             
+            // Se abbiamo i valori, assicuriamoci che siano salvati nei campi nascosti
             if (pythonScriptUrl) {
                 document.getElementById('hidden_python_script_url').value = pythonScriptUrl;
             }
@@ -909,6 +819,7 @@ const getViewScripts = (protocol, host) => {
                 return;
             }
             
+            // Salva l'intervallo nel campo nascosto del form
             document.getElementById('hidden_python_update_interval').value = interval;
             
             try {
@@ -966,7 +877,7 @@ const getViewScripts = (protocol, host) => {
             statusEl.style.display = 'block';
             
             let html = '<table style="width: 100%; text-align: left;">';
-            html += '<tr><td><strong>' + t('running') + ':</strong>NonNull<td>' + (data.isRunning ? t('yes') : t('no')) + 'NonNull</table>';
+            html += '<tr><td><strong>' + t('running') + ':</strong>NonNull<td>' + (data.isRunning ? t('yes') : t('no')) + 'NonNull</tr>';
             html += '<tr><td><strong>' + t('last_run') + ':</strong>NonNull<td>' + data.lastExecution + 'NonNull</tr>';
             html += '<tr><td><strong>' + t('script_exists') + ':</strong>NonNull<td>' + (data.scriptExists ? t('yes') : t('no')) + 'NonNull</tr>';
             
@@ -1008,6 +919,12 @@ const getViewScripts = (protocol, host) => {
             if (enEl) enEl.addEventListener('change', syncResolverFieldsToForm);
             checkResolverStatus();
         }
+        
+        window.addEventListener('DOMContentLoaded', function() {
+            window.applyLanguage(window.currentLang);
+            initializePythonFields();
+            initializeResolverFields();
+        });
 
         async function downloadResolverScript() {
             syncResolverFieldsToForm();
@@ -1038,6 +955,7 @@ const getViewScripts = (protocol, host) => {
                 
                 if (data.success) {
                     alert(t('success_resolver_downloaded'));
+                    // Non serve impostare nuovamente l'URL poiché lo leggiamo direttamente dal campo configurazione
                     document.getElementById('resolverEnabled').checked = true;
                     const he = document.getElementById('hidden_resolver_enabled');
                     if (he) he.value = 'true';
@@ -1073,6 +991,7 @@ const getViewScripts = (protocol, host) => {
                 if (data.success) {
                     alert(t('success_template_created'));
                     
+                    // Avvia il download automatico
                     window.location.href = '/api/resolver/download-template';
                     
                     checkResolverStatus();
@@ -1167,6 +1086,7 @@ const getViewScripts = (protocol, host) => {
             try {
                 showLoader(t('loader_scheduling'));
                 
+                // Crea un campo nascosto nel form se non esiste già
                 let hiddenField = document.querySelector('input[name="resolver_update_interval"]');
                 if (!hiddenField) {
                     hiddenField = document.createElement('input');
@@ -1175,6 +1095,7 @@ const getViewScripts = (protocol, host) => {
                     document.getElementById('configForm').appendChild(hiddenField);
                 }
                 
+                // Imposta il valore dell'intervallo nel campo nascosto
                 hiddenField.value = interval;
                 
                 const response = await fetch('/api/resolver', {
@@ -1205,7 +1126,9 @@ const getViewScripts = (protocol, host) => {
             }
         }
         
+        // Funzione per inizializzare i campi Python con i valori dai campi nascosti
         function initializePythonFields() {
+            // Copia i valori dai campi nascosti del form ai campi dell'interfaccia Python
             const pythonScriptUrl = document.getElementById('hidden_python_script_url').value;
             const pythonUpdateInterval = document.getElementById('hidden_python_update_interval').value;
             
@@ -1217,11 +1140,13 @@ const getViewScripts = (protocol, host) => {
                 document.getElementById('updateInterval').value = pythonUpdateInterval;
             }
             
+            // Se abbiamo un URL, eseguiamo il controllo dello stato
             if (pythonScriptUrl) {
                 checkPythonStatus();
             }
         }
 
+        //funzioni per visualizzare la rotella di caricamento
         function showLoader(message) {
             document.getElementById('loaderMessage').textContent = message || t('loader_default');
             document.getElementById('loaderOverlay').style.display = 'flex';
@@ -1229,21 +1154,6 @@ const getViewScripts = (protocol, host) => {
         
         function hideLoader() {
             document.getElementById('loaderOverlay').style.display = 'none';
-        }
-        
-        function showToast(message, type) {
-            if (typeof type === 'undefined') type = 'success';
-            const toast = document.getElementById('toast');
-            if (toast) {
-                toast.textContent = message;
-                toast.style.backgroundColor = type === 'error' ? '#f44336' : '#4CAF50';
-                toast.style.display = 'block';
-                setTimeout(function() {
-                    toast.style.display = 'none';
-                }, 3000);
-            } else {
-                alert(message);
-            }
         }
 
         async function stopResolverUpdates() {
@@ -1267,8 +1177,10 @@ const getViewScripts = (protocol, host) => {
                 if (data.success) {
                     alert(data.message);
                     
+                    // Pulisci anche il campo dell'intervallo
                     document.getElementById('resolverUpdateInterval').value = '';
                     
+                    // Aggiorna anche il valore nel campo nascosto
                     let hiddenField = document.querySelector('input[name="resolver_update_interval"]');
                     if (hiddenField) {
                         hiddenField.value = '';
@@ -1284,11 +1196,10 @@ const getViewScripts = (protocol, host) => {
             }
         }
         
+        // Inizializza i campi Python all'avvio
         window.addEventListener('DOMContentLoaded', function() {
-            window.applyLanguage(window.currentLang);
             initializePythonFields();
             initializeResolverFields();
-            setupLogoPreview();
         });
     `;
 };

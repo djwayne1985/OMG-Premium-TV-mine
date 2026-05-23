@@ -43,9 +43,10 @@ function renderGatePage(manifest, returnPath) {
 }
 
 const renderConfigPage = (protocol, host, query, manifest, sessionKey = null, showSessionChangeWarning = false) => {
-   // Check if addon-config.json exists - this is now just informational
+   // Verifica se il file addon-config.json esiste
    const configPath = path.join(__dirname, '..', 'addon-config.json');
-   const configExists = fs.existsSync(configPath);
+   const m3uDefaultUrl = 'https://github.com/mccoy88f/OMG-Premium-TV/blob/main/tv.png?raw=true';
+   const m3uIsDisabled = !fs.existsSync(configPath);
    const sessionIdDisplay = sessionKey || '—';
 
    return `
@@ -157,8 +158,7 @@ const renderConfigPage = (protocol, host, query, manifest, sessionKey = null, sh
                .config-form input[type="text"],
                .config-form input[type="url"],
                .config-form input[type="password"],
-               .config-form input[type="file"],
-               .config-form textarea {
+               .config-form input[type="file"] {
                    width: 100%;
                    padding: 8px;
                    margin-bottom: 10px;
@@ -166,10 +166,6 @@ const renderConfigPage = (protocol, host, query, manifest, sessionKey = null, sh
                    border: 1px solid #666;
                    background: #333;
                    color: white;
-               }
-               .config-form textarea {
-                   resize: vertical;
-                   min-height: 60px;
                }
                .buttons {
                    margin: 30px 0;
@@ -263,29 +259,16 @@ const renderConfigPage = (protocol, host, query, manifest, sessionKey = null, sh
                a:hover {
                    text-decoration: underline;
                }
-               .addon-customization-section {
-                   background: rgba(138, 90, 171, 0.2);
-                   border: 2px solid #8A5AAB;
-                   margin-bottom: 20px;
-               }
-               .logo-preview {
-                   margin-top: 10px;
-                   padding: 10px;
-                   background: rgba(0,0,0,0.3);
+               textarea {
+                   font-family: monospace;
+                   font-size: 12px;
+                   background: #1e1e1e;
+                   color: #d4d4d4;
+                   border: 1px solid #555;
                    border-radius: 4px;
-                   text-align: center;
-               }
-               .logo-preview img {
-                   max-width: 100px;
-                   max-height: 100px;
-                   border-radius: 8px;
-               }
-               .config-warning {
-                   margin-bottom: 20px;
-                   padding: 15px;
-                   background: rgba(255, 193, 7, 0.15);
-                   border: 1px solid #ffc107;
-                   border-radius: 8px;
+                   padding: 8px;
+                   width: 100%;
+                   box-sizing: border-box;
                }
            </style>
        </head>
@@ -305,14 +288,13 @@ const renderConfigPage = (protocol, host, query, manifest, sessionKey = null, sh
                    <span style="color: #666;">|</span>
                    <a href="#" id="langFr" onclick="setLanguage('fr'); return false;" style="color: inherit; text-decoration: none; margin-left: 6px;">🇫🇷 FRA</a>
                </div>
-               <img class="logo" id="addonLogo" src="${manifest.logo}" alt="logo" onerror="this.src='https://github.com/mccoy88f/OMG-TV-Stremio-Addon/blob/main/tv.png?raw=true'">
-               <h1 id="addonNameDisplay">${manifest.name} <span style="font-size: 16px; color: #aaa;">v${manifest.version}</span></h1>
-               <p id="addonDescriptionDisplay" style="color: #ccc; font-size: 14px; margin-top: -10px;">${manifest.description}</p>
+               <img class="logo" src="${manifest.logo}" alt="logo">
+               <h1>${manifest.name} <span style="font-size: 16px; color: #aaa;">v${manifest.version}</span></h1>
 
                
                <div class="manifest-url">
                    <strong>URL Manifest:</strong><br>
-                   <span id="manifestUrlDisplay">${protocol}://${host}/manifest.json?${new URLSearchParams(query)}</span>
+                   ${protocol}://${host}/manifest.json?${new URLSearchParams(query)}
                </div>
 
                <div class="buttons">
@@ -321,61 +303,6 @@ const renderConfigPage = (protocol, host, query, manifest, sessionKey = null, sh
                </div>
                
                <div class="config-form">
-                   <!-- NEW SECTION: Complete Addon Customization -->
-                   <div class="advanced-settings addon-customization-section">
-                       <div class="advanced-settings-header" onclick="toggleAddonCustomization()">
-                           <strong>🎨 <span data-i18n="addon_customization_title">Customize Addon Appearance</span></strong>
-                           <span id="addon-customization-toggle">▼</span>
-                       </div>
-                       <div class="advanced-settings-content show" id="addon-customization-content">
-                           <p style="color: #aaa; font-size: 13px; margin: 0 0 10px 0;" data-i18n="addon_customization_desc">
-                               Customize how your addon appears in Stremio. Changes require addon reinstallation.
-                           </p>
-                           
-                           <div class="form-group">
-                               <label data-i18n="addon_name_label">Addon Name:</label>
-                               <input type="text" id="addonNameInput" 
-                                      value="${manifest.name}" 
-                                      placeholder="AI Media TV" 
-                                      style="width: 100%; padding: 8px; margin-bottom: 10px;">
-                               
-                               <label data-i18n="addon_description_label">Addon Description:</label>
-                               <textarea id="addonDescriptionInput" 
-                                         rows="3" 
-                                         style="width: 100%; padding: 8px; margin-bottom: 10px;">${manifest.description}</textarea>
-                               
-                               <label data-i18n="addon_logo_label">Addon Logo URL:</label>
-                               <input type="url" id="addonLogoInput" 
-                                      value="${manifest.logo}" 
-                                      placeholder="https://example.com/logo.png" 
-                                      style="width: 100%; padding: 8px; margin-bottom: 10px;">
-                               
-                               <div class="logo-preview">
-                                   <strong>Logo Preview:</strong><br>
-                                   <img id="logoPreview" src="${manifest.logo}" alt="Logo preview" 
-                                        style="max-width: 100px; max-height: 100px; margin-top: 10px;"
-                                        onerror="this.src='https://github.com/mccoy88f/OMG-TV-Stremio-Addon/blob/main/tv.png?raw=true'">
-                               </div>
-                               
-                               <button type="button" onclick="updateAddonSettings()" style="width: 100%; margin-top: 10px;" data-i18n="update_addon_settings">
-                                   Update Addon Settings (Requires Reinstall)
-                               </button>
-                               
-                               <small style="color: #ffc107; display: block; margin-top: 8px;" data-i18n="addon_settings_warning">
-                                   ⚠️ After updating these settings, you must remove and reinstall the addon in Stremio for the changes to appear.
-                               </small>
-                           </div>
-                       </div>
-                   </div>
-
-                   ${!configExists ? `
-                   <div class="config-warning">
-                       <strong style="color: #ffc107;">⚠️ Configuration File Missing</strong>
-                       <p style="margin: 10px 0; font-size: 14px;">The addon-config.json file is missing. Click the button below to create it automatically.</p>
-                       <button onclick="createConfigFile()" style="background: #4CAF50; margin-top: 5px; padding: 10px 20px;">Create Config File</button>
-                   </div>
-                   ` : ''}
-
                    <h2 data-i18n="playlist_epg">Playlist & EPG</h2>
                    ${showSessionChangeWarning ? `
                    <div class="session-change-warning" style="margin-bottom: 1rem; padding: 12px 16px; background: rgba(255, 193, 7, 0.15); border: 1px solid rgba(255, 193, 7, 0.5); border-radius: 8px; color: #ffc107; font-size: 14px;">
@@ -396,7 +323,9 @@ const renderConfigPage = (protocol, host, query, manifest, sessionKey = null, sh
                    <form id="configForm" onsubmit="updateConfig(event)">
                        <label data-i18n="m3u_url">M3U URL:</label>
                        <input type="text" name="m3u" 
-                              value="${query.m3u || ''}" 
+                              value="${m3uIsDisabled ? m3uDefaultUrl : (query.m3u || '')}" 
+                              ${m3uIsDisabled ? 'readonly' : ''} 
+                              data-i18n-placeholder="m3u_placeholder"
                               placeholder="https://example.com/playlist1.m3u,https://example.com/playlist2.m3u"
                               required>
                        <small style="color: #999; display: block; margin-top: 5px;" data-i18n="m3u_hint">
@@ -406,6 +335,7 @@ const renderConfigPage = (protocol, host, query, manifest, sessionKey = null, sh
                        <label data-i18n="epg_url">EPG URL:</label>
                        <input type="text" name="epg" 
                               value="${query.epg || ''}"
+                              data-i18n-placeholder="epg_placeholder"
                               placeholder="https://example.com/epg1.xml,https://example.com/epg2.xml">
                        <small style="color: #999; display: block; margin-top: 5px;" data-i18n="epg_hint">
                            💡 You can enter multiple EPG URLs separated by a comma (,)
@@ -452,13 +382,13 @@ const renderConfigPage = (protocol, host, query, manifest, sessionKey = null, sh
                                </label>
 
                                <label data-i18n="id_suffix">ID suffix:</label>
-                               <input type="text" name="id_suffix" value="${query.id_suffix || ''}" placeholder="Example: it">
+                               <input type="text" name="id_suffix" value="${query.id_suffix || ''}" data-i18n-placeholder="id_suffix_placeholder" placeholder="Example: it">
 
                                <label data-i18n="remapper_path">Remapper file path:</label>
-                               <input type="text" name="remapper_path" value="${query.remapper_path || ''}" placeholder="Example: https://raw.githubusercontent.com/...">
+                               <input type="text" name="remapper_path" value="${query.remapper_path || ''}" data-i18n-placeholder="remapper_placeholder" placeholder="Example: https://raw.githubusercontent.com/...">
 
                                <label data-i18n="update_interval">Playlist update interval:</label>
-                               <input type="text" name="update_interval" value="${query.update_interval || '12:00'}" placeholder="HH:MM (default 12:00)">
+                               <input type="text" name="update_interval" value="${query.update_interval || '12:00'}" data-i18n-placeholder="update_interval_placeholder" placeholder="HH:MM (default 12:00)">
                                <small style="color: #999;" data-i18n="update_interval_hint">Format HH:MM (e.g. 1:00 or 01:00), default 12:00</small>
                                
                            </div>
@@ -510,9 +440,9 @@ const renderConfigPage = (protocol, host, query, manifest, sessionKey = null, sh
                                </div>
                                <div id="homeAuthFields" style="margin-top: 10px; display: none;">
                                    <label data-i18n="password">Password:</label>
-                                   <input type="password" id="homeAuthPassword" placeholder="New password">
+                                   <input type="password" id="homeAuthPassword" data-i18n-placeholder="new_password" placeholder="New password">
                                    <label data-i18n="confirm_password">Confirm password:</label>
-                                   <input type="password" id="homeAuthConfirm" placeholder="Confirm password">
+                                   <input type="password" id="homeAuthConfirm" data-i18n-placeholder="confirm_password" placeholder="Confirm password">
                                    <button type="button" onclick="saveHomeAuth()" style="margin-top: 10px;" data-i18n="save_protection">Save protection</button>
                                    <button type="button" id="homeAuthCancelBtn" onclick="cancelEditHomeAuth()" style="margin-left: 10px; background: #666;" data-i18n="cancel">Cancel</button>
                                    <span id="homeAuthMessage" style="margin-left: 10px; font-size: 14px;"></span>
@@ -541,7 +471,7 @@ const renderConfigPage = (protocol, host, query, manifest, sessionKey = null, sh
             
                            <div id="pythonForm">
                                <label data-i18n="python_script_url">Python script URL:</label>
-                               <input type="url" id="pythonScriptUrl" placeholder="https://example.com/script.py">
+                               <input type="url" id="pythonScriptUrl" data-i18n-placeholder="python_script_placeholder" placeholder="https://example.com/script.py">
                 
                                <div style="display: flex; gap: 10px; margin-top: 15px;">
                                    <button onclick="downloadPythonScript()" style="flex: 1;" data-i18n="download_script">DOWNLOAD SCRIPT</button>
@@ -586,7 +516,7 @@ const renderConfigPage = (protocol, host, query, manifest, sessionKey = null, sh
                        <div class="advanced-settings-content" id="resolver-section-content">
                            <div style="margin-bottom: 1rem;">
                                <label data-i18n="resolver_script">Python Resolver script URL:</label>
-                               <input type="url" id="resolverScriptUrl" value="${query.resolver_script || ''}" placeholder="https://example.com/resolver.py" style="width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #666; background: #333; color: white;">
+                               <input type="url" id="resolverScriptUrl" value="${query.resolver_script || ''}" data-i18n-placeholder="resolver_script_placeholder" placeholder="https://example.com/resolver.py" style="width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #666; background: #333; color: white;">
                                <label style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
                                    <input type="checkbox" id="resolverEnabled" ${query.resolver_enabled === 'true' ? 'checked' : ''}>
                                    <span data-i18n="resolver_enabled">Enable Python Resolver</span>
@@ -629,6 +559,44 @@ const renderConfigPage = (protocol, host, query, manifest, sessionKey = null, sh
                                    <h3 data-i18n="resolver_status_title">Python Resolver status</h3>
                                    <div id="resolverStatusContent"></div>
                                </div>
+                           </div>
+                       </div>
+                   </div>
+               </div>
+
+               <!-- JSON Editor Section -->
+               <div class="config-form" style="margin-top: 30px;">
+                   <div class="advanced-settings" style="border-color: #4CAF50;">
+                       <div class="advanced-settings-header" onclick="toggleJsonEditor()">
+                           <strong>📁 <span data-i18n="json_editor_title">Direct JSON File Editor (Advanced)</span></strong>
+                           <span id="json-editor-toggle">▼</span>
+                       </div>
+                       <div class="advanced-settings-content" id="json-editor-content">
+                           <p style="color: #ffc107; font-size: 13px; margin: 0 0 10px 0;">
+                               ⚠️ Warning: Editing these files directly can break the addon if not done correctly. 
+                               Make backups before making changes.
+                           </p>
+                           
+                           <div style="margin-bottom: 20px;">
+                               <h4 style="margin: 0 0 10px 0;">addon-config.json</h4>
+                               <textarea id="configJsonEditor" rows="12" style="width: 100%; padding: 8px; font-family: monospace; font-size: 12px; background: #1e1e1e; color: #d4d4d4; border: 1px solid #555; border-radius: 4px;"></textarea>
+                               <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                   <button onclick="loadConfigJson()" style="flex: 1; background: #2196F3;">Load Config</button>
+                                   <button onclick="saveConfigJson()" style="flex: 1; background: #4CAF50;">Save Config</button>
+                                   <button onclick="resetConfigJson()" style="flex: 1; background: #ff9800;">Reset to Default</button>
+                               </div>
+                               <div id="configJsonMessage" style="margin-top: 5px; font-size: 12px;"></div>
+                           </div>
+                           
+                           <div style="margin-top: 20px; border-top: 1px solid #666; padding-top: 20px;">
+                               <h4 style="margin: 0 0 10px 0;">addon-settings.json</h4>
+                               <textarea id="settingsJsonEditor" rows="8" style="width: 100%; padding: 8px; font-family: monospace; font-size: 12px; background: #1e1e1e; color: #d4d4d4; border: 1px solid #555; border-radius: 4px;"></textarea>
+                               <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                   <button onclick="loadSettingsJson()" style="flex: 1; background: #2196F3;">Load Settings</button>
+                                   <button onclick="saveSettingsJson()" style="flex: 1; background: #4CAF50;">Save Settings</button>
+                                   <button onclick="resetSettingsJson()" style="flex: 1; background: #ff9800;">Reset to Default</button>
+                               </div>
+                               <div id="settingsJsonMessage" style="margin-top: 5px; font-size: 12px;"></div>
                            </div>
                        </div>
                    </div>
