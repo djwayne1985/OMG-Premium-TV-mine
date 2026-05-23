@@ -31,6 +31,40 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Ensure addon-config.json exists
+function ensureAddonConfigExists() {
+    const configPath = path.join(__dirname, 'addon-config.json');
+    
+    if (!fs.existsSync(configPath)) {
+        const defaultConfig = {
+            addonName: "AI Media TV",
+            addonId: "org.mccoy88f.omgtv",
+            addonDescription: "Modalita provvisoria, installazione con errori, attivo mod. provvisoria",
+            addonVersion: "7.0.0",
+            addonLogo: "https://github.com/mccoy88f/OMG-TV-Stremio-Addon/blob/main/tv.png?raw=true",
+            defaultLanguage: "English"
+        };
+        
+        fs.writeFileSync(configPath, JSON.stringify(defaultConfig, null, 2));
+        logger.log('_', 'Created addon-config.json with default settings');
+    }
+}
+
+function ensureAddonSettingsExists() {
+    const settingsPath = path.join(__dirname, 'addon-settings.json');
+    
+    if (!fs.existsSync(settingsPath)) {
+        const defaultSettings = {
+            addonName: "AI Media TV",
+            addonDescription: "Modalita provvisoria, installazione con errori, attivo mod. provvisoria",
+            addonLogo: "https://github.com/mccoy88f/OMG-TV-Stremio-Addon/blob/main/tv.png?raw=true"
+        };
+        
+        fs.writeFileSync(settingsPath, JSON.stringify(defaultSettings, null, 2));
+        logger.log('_', 'Created addon-settings.json with default settings');
+    }
+}
+
 // Chiave cache derivata dalla config (stessa config = stessa cache; nessun session_id scelto dall'utente)
 function getSessionKeyFromConfig(userConfig) {
     if (!userConfig || typeof userConfig !== 'object') return '_default';
@@ -187,6 +221,41 @@ app.get('/api/get-addon-settings', async (req, res) => {
         res.json({ success: true, settings });
     } catch (error) {
         logger.error('_', 'Error getting addon settings:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// API to create addon-config.json if missing
+app.post('/api/create-config', async (req, res) => {
+    try {
+        const configPath = path.join(__dirname, 'addon-config.json');
+        
+        if (fs.existsSync(configPath)) {
+            return res.json({ 
+                success: true, 
+                message: 'Config file already exists',
+                exists: true
+            });
+        }
+        
+        const defaultConfig = {
+            addonName: "AI Media TV",
+            addonId: "org.mccoy88f.omgtv",
+            addonDescription: "Modalita provvisoria, installazione con errori, attivo mod. provvisoria",
+            addonVersion: "7.0.0",
+            addonLogo: "https://github.com/mccoy88f/OMG-TV-Stremio-Addon/blob/main/tv.png?raw=true",
+            defaultLanguage: "English"
+        };
+        
+        fs.writeFileSync(configPath, JSON.stringify(defaultConfig, null, 2));
+        
+        res.json({ 
+            success: true, 
+            message: 'Config file created successfully',
+            exists: true
+        });
+    } catch (error) {
+        logger.error('_', 'Error creating config:', error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 });
@@ -803,6 +872,10 @@ app.post('/api/python-script', async (req, res) => {
 });
 
 async function startAddon() {
+    // Ensure config files exist
+    ensureAddonConfigExists();
+    ensureAddonSettingsExists();
+    
     cleanupTempFolder();
 
     // Inizializza CacheManager di default (per compatibilità e python-runner)

@@ -103,6 +103,35 @@ const getViewScripts = (protocol, host) => {
             }
         }
 
+        // Create config file function
+        async function createConfigFile() {
+            showLoader('Creating configuration file...');
+            
+            try {
+                const response = await fetch('/api/create-config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                hideLoader();
+                
+                if (result.success) {
+                    showToast('Config file created successfully! Refreshing page...');
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showToast('Error: ' + result.message, 'error');
+                }
+            } catch (error) {
+                hideLoader();
+                showToast('Error creating config: ' + error.message, 'error');
+            }
+        }
+
         // Update addon settings function
         async function updateAddonSettings() {
             const addonName = document.getElementById('addonNameInput').value.trim();
@@ -623,20 +652,20 @@ const getViewScripts = (protocol, host) => {
             statusEl.style.display = 'block';
             
             let html = '<table style="width: 100%; text-align: left;">';
-            html += '<tr><td><strong>' + t('running') + ':</strong></td><td>' + (data.isRunning ? t('yes') : t('no')) + '</td></tr>';
-            html += '<tr><td><strong>' + t('last_run') + ':</strong></td><td>' + data.lastExecution + '</td></tr>';
-            html += '<tr><td><strong>' + t('script_exists') + ':</strong></td><td>' + (data.scriptExists ? t('yes') : t('no')) + '</td></tr>';
-            html += '<tr><td><strong>' + t('m3u_exists') + ':</strong></td><td>' + (data.m3uExists ? t('yes') : t('no')) + '</td></tr>';
+            html += '<tr><td><strong>' + t('running') + ':</strong>NonNull<td>' + (data.isRunning ? t('yes') : t('no')) + 'NonNull</tr>';
+            html += '<tr><td><strong>' + t('last_run') + ':</strong>NonNull<td>' + data.lastExecution + 'NonNull</tr>';
+            html += '<tr><td><strong>' + t('script_exists') + ':</strong>NonNull<td>' + (data.scriptExists ? t('yes') : t('no')) + 'NonNull</tr>';
+            html += '<tr><td><strong>' + t('m3u_exists') + ':</strong>NonNull<td>' + (data.m3uExists ? t('yes') : t('no')) + 'NonNull</tr>';
             
             if (data.scheduledUpdates) {
-                html += '<tr><td><strong>' + t('auto_update') + ':</strong></td><td>' + t('auto_update_active') + ' ' + data.updateInterval + '</td></tr>';
+                html += '<tr><td><strong>' + t('auto_update') + ':</strong>NonNull<td>' + t('auto_update_active') + ' ' + data.updateInterval + 'NonNull</tr>';
             }
             
             if (data.scriptUrl) {
-                html += '<tr><td><strong>' + t('script_url') + ':</strong></td><td>' + data.scriptUrl + '</td></tr>';
+                html += '<tr><td><strong>' + t('script_url') + ':</strong>NonNull<td>' + data.scriptUrl + 'NonNull</tr>';
             }
             if (data.lastError) {
-                html += '<tr><td><strong>' + t('last_error') + ':</strong></td><td style="color: #ff6666;">' + data.lastError + '</td></tr>';
+                html += '<tr><td><strong>' + t('last_error') + ':</strong>NonNull<td style="color: #ff6666;">' + data.lastError + 'NonNull</table>';
             }
             html += '</table>';
             
@@ -838,20 +867,20 @@ const getViewScripts = (protocol, host) => {
             statusEl.style.display = 'block';
             
             let html = '<table style="width: 100%; text-align: left;">';
-            html += '<tr><td><strong>' + t('running') + ':</strong></td><td>' + (data.isRunning ? t('yes') : t('no')) + '</td></tr>';
-            html += '<tr><td><strong>' + t('last_run') + ':</strong></td><td>' + data.lastExecution + '</td></tr>';
-            html += '<tr><td><strong>' + t('script_exists') + ':</strong></td><td>' + (data.scriptExists ? t('yes') : t('no')) + '</td></tr>';
+            html += '<tr><td><strong>' + t('running') + ':</strong>NonNull<td>' + (data.isRunning ? t('yes') : t('no')) + 'NonNull</tr>';
+            html += '<tr><td><strong>' + t('last_run') + ':</strong>NonNull<td>' + data.lastExecution + 'NonNull</tr>';
+            html += '<tr><td><strong>' + t('script_exists') + ':</strong>NonNull<td>' + (data.scriptExists ? t('yes') : t('no')) + 'NonNull</tr>';
             
             if (data.resolverVersion) {
-                html += '<tr><td><strong>' + t('version') + ':</strong></td><td>' + data.resolverVersion + '</td></tr>';
+                html += '<tr><td><strong>' + t('version') + ':</strong>NonNull<td>' + data.resolverVersion + 'NonNull</tr>';
             }
             
             if (data.cacheItems !== undefined) {
-                html += '<tr><td><strong>' + t('cache_items') + ':</strong></td><td>' + data.cacheItems + '</td></tr>';
+                html += '<tr><td><strong>' + t('cache_items') + ':</strong>NonNull<td>' + data.cacheItems + 'NonNull</tr>';
             }
             
             if (data.scheduledUpdates) {
-                html += '<tr><td><strong>' + t('auto_update') + ':</strong></td><td>' + t('auto_update_active') + ' ' + data.updateInterval + 'NonNull</tr>';
+                html += '<tr><td><strong>' + t('auto_update') + ':</strong>NonNull<td>' + t('auto_update_active') + ' ' + data.updateInterval + 'NonNull</tr>';
             }
             
             if (data.scriptUrl) {

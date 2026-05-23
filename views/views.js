@@ -280,6 +280,13 @@ const renderConfigPage = (protocol, host, query, manifest, sessionKey = null, sh
                    max-height: 100px;
                    border-radius: 8px;
                }
+               .config-warning {
+                   margin-bottom: 20px;
+                   padding: 15px;
+                   background: rgba(255, 193, 7, 0.15);
+                   border: 1px solid #ffc107;
+                   border-radius: 8px;
+               }
            </style>
        </head>
        <body>
@@ -360,6 +367,14 @@ const renderConfigPage = (protocol, host, query, manifest, sessionKey = null, sh
                            </div>
                        </div>
                    </div>
+
+                   ${!configExists ? `
+                   <div class="config-warning">
+                       <strong style="color: #ffc107;">⚠️ Configuration File Missing</strong>
+                       <p style="margin: 10px 0; font-size: 14px;">The addon-config.json file is missing. Click the button below to create it automatically.</p>
+                       <button onclick="createConfigFile()" style="background: #4CAF50; margin-top: 5px; padding: 10px 20px;">Create Config File</button>
+                   </div>
+                   ` : ''}
 
                    <h2 data-i18n="playlist_epg">Playlist & EPG</h2>
                    ${showSessionChangeWarning ? `
