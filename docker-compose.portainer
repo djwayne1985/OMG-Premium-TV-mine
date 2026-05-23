@@ -15,8 +15,6 @@ services:
 
 #    volumes:
 #      - .:/app # Monta la directory corrente nel container (opzionale, se vuoi lavorare con file locali)
-	   - ./data:/app/data
-	   - ./temp:/app/temp
 
     ports:
       - "10001:10000"

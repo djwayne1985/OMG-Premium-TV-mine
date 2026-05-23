@@ -141,7 +141,7 @@ const getViewScripts = (protocol, host) => {
                     if (addonNameDisplay) {
                         const versionSpan = addonNameDisplay.querySelector('span');
                         if (versionSpan) {
-                            addonNameDisplay.innerHTML = `${result.settings.addonName} <span style="font-size: 16px; color: #aaa;">${versionSpan.innerText}</span>`;
+                            addonNameDisplay.innerHTML = result.settings.addonName + ' <span style="font-size: 16px; color: #aaa;">' + versionSpan.innerText + '</span>';
                         } else {
                             addonNameDisplay.textContent = result.settings.addonName;
                         }
@@ -165,8 +165,8 @@ const getViewScripts = (protocol, host) => {
                     // Show success message with reinstall instructions
                     showToast('Addon settings updated successfully!');
                     
-                    setTimeout(() => {
-                        if (confirm('Addon settings updated successfully!\n\nTo see the changes in Stremio, you need to:\n1. Remove the current addon from Stremio\n2. Reinstall the addon using the same installation link\n\nDo you want to copy the installation URL now?')) {
+                    setTimeout(function() {
+                        if (confirm('Addon settings updated successfully!\\n\\nTo see the changes in Stremio, you need to:\\n1. Remove the current addon from Stremio\\n2. Reinstall the addon using the same installation link\\n\\nDo you want to copy the installation URL now?')) {
                             copyManifestUrl();
                         }
                     }, 500);
@@ -187,7 +187,7 @@ const getViewScripts = (protocol, host) => {
             const whenEnabled = document.getElementById('homeAuthWhenEnabled');
             const fields = document.getElementById('homeAuthFields');
             if (!cb || !whenEnabled || !fields) return;
-            fetch('/api/home-auth/status').then(r => r.json()).then(function(data) {
+            fetch('/api/home-auth/status').then(function(r) { return r.json(); }).then(function(data) {
                 cb.checked = data.enabled;
                 whenEnabled.style.display = data.enabled ? 'block' : 'none';
                 fields.style.display = 'none';
@@ -302,7 +302,7 @@ const getViewScripts = (protocol, host) => {
             const formData = new FormData(form);
             const params = new URLSearchParams();
             
-            formData.forEach((value, key) => {
+            formData.forEach(function(value, key) {
                 if (value || key === 'epg_enabled' || key === 'force_proxy' || key === 'resolver_enabled') {
                     if (key === 'epg_enabled' || key === 'force_proxy' || key === 'resolver_enabled') {
                         const el = form.elements[key];
@@ -412,7 +412,7 @@ const getViewScripts = (protocol, host) => {
         function proceedInstallation() {
             const configQueryString = getConfigQueryString();
             const configBase64 = btoa(configQueryString);
-            window.location.href = \`stremio://${host}/\${configBase64}/manifest.json\`;
+            window.location.href = 'stremio://' + host + '/' + configBase64 + '/manifest.json';
             document.getElementById('confirmModal').style.display = 'none';
         }
 
@@ -424,18 +424,18 @@ const getViewScripts = (protocol, host) => {
             e.preventDefault();
             const configQueryString = getConfigQueryString();
             const configBase64 = btoa(configQueryString);
-            window.location.href = \`${protocol}://${host}/\${configBase64}/configure?generated=1\`;
+            window.location.href = protocol + '://' + host + '/' + configBase64 + '/configure?generated=1';
         }
 
         function copyManifestUrl() {
             const configQueryString = getConfigQueryString();
             const configBase64 = btoa(configQueryString);
-            const manifestUrl = \`${protocol}://${host}/\${configBase64}/manifest.json\`;
+            const manifestUrl = protocol + '://' + host + '/' + configBase64 + '/manifest.json';
             
-            navigator.clipboard.writeText(manifestUrl).then(() => {
+            navigator.clipboard.writeText(manifestUrl).then(function() {
                 const toast = document.getElementById('toast');
                 toast.style.display = 'block';
-                setTimeout(() => {
+                setTimeout(function() {
                     toast.style.display = 'none';
                 }, 2000);
             });
@@ -450,8 +450,7 @@ const getViewScripts = (protocol, host) => {
             params.resolver_enabled = params.resolver_enabled === 'true';
             params.resolver_update_interval = 
                 document.getElementById('resolverUpdateInterval').value || 
-                document.querySelector('input[name="resolver_update_interval"]')?.value || 
-                '';
+                (document.querySelector('input[name="resolver_update_interval"]')?.value || '');
             try {
                 const r = await fetch('/api/session-key', {
                     method: 'POST',
@@ -605,7 +604,7 @@ const getViewScripts = (protocol, host) => {
                     
                     const configQueryString = getConfigQueryString();
                     const configBase64 = btoa(configQueryString);
-                    window.location.href = \`${protocol}://${host}/\${configBase64}/configure\`;
+                    window.location.href = protocol + '://' + host + '/' + configBase64 + '/configure';
         
                 } catch (error) {
                     hideLoader();
@@ -624,20 +623,20 @@ const getViewScripts = (protocol, host) => {
             statusEl.style.display = 'block';
             
             let html = '<table style="width: 100%; text-align: left;">';
-            html += '<tr><td><strong>' + t('running') + ':</strong></td><td>' + (data.isRunning ? t('yes') : t('no')) + '</td><tr>';
-            html += '<tr><td><strong>' + t('last_run') + ':</strong></td><td>' + data.lastExecution + 'NonNull</tr>';
-            html += '<tr><td><strong>' + t('script_exists') + ':</strong>NonNull<td>' + (data.scriptExists ? t('yes') : t('no')) + 'NonNull</tr>';
-            html += '<tr><td><strong>' + t('m3u_exists') + ':</strong>NonNull<td>' + (data.m3uExists ? t('yes') : t('no')) + 'NonNull</table>';
+            html += '<tr><td><strong>' + t('running') + ':</strong></td><td>' + (data.isRunning ? t('yes') : t('no')) + '</td></tr>';
+            html += '<tr><td><strong>' + t('last_run') + ':</strong></td><td>' + data.lastExecution + '</td></tr>';
+            html += '<tr><td><strong>' + t('script_exists') + ':</strong></td><td>' + (data.scriptExists ? t('yes') : t('no')) + '</td></tr>';
+            html += '<tr><td><strong>' + t('m3u_exists') + ':</strong></td><td>' + (data.m3uExists ? t('yes') : t('no')) + '</td></tr>';
             
             if (data.scheduledUpdates) {
-                html += '<tr><td><strong>' + t('auto_update') + ':</strong>NonNull<td>' + t('auto_update_active') + ' ' + data.updateInterval + 'NonNull</tr>';
+                html += '<tr><td><strong>' + t('auto_update') + ':</strong></td><td>' + t('auto_update_active') + ' ' + data.updateInterval + '</td></tr>';
             }
             
             if (data.scriptUrl) {
-                html += '<tr><td><strong>' + t('script_url') + ':</strong>NonNull<td>' + data.scriptUrl + 'NonNull</tr>';
+                html += '<tr><td><strong>' + t('script_url') + ':</strong></td><td>' + data.scriptUrl + '</td></tr>';
             }
             if (data.lastError) {
-                html += '<tr><td><strong>' + t('last_error') + ':</strong>NonNull<td style="color: #ff6666;">' + data.lastError + 'NonNull</tr>';
+                html += '<tr><td><strong>' + t('last_error') + ':</strong></td><td style="color: #ff6666;">' + data.lastError + '</td></tr>';
             }
             html += '</table>';
             
@@ -839,20 +838,20 @@ const getViewScripts = (protocol, host) => {
             statusEl.style.display = 'block';
             
             let html = '<table style="width: 100%; text-align: left;">';
-            html += '<tr><td><strong>' + t('running') + ':</strong>NonNull<td>' + (data.isRunning ? t('yes') : t('no')) + 'NonNull</tr>';
-            html += '<tr><td><strong>' + t('last_run') + ':</strong>NonNull<td>' + data.lastExecution + 'NonNull</tr>';
-            html += '<tr><td><strong>' + t('script_exists') + ':</strong>NonNull<td>' + (data.scriptExists ? t('yes') : t('no')) + 'NonNull</tr>';
+            html += '<tr><td><strong>' + t('running') + ':</strong></td><td>' + (data.isRunning ? t('yes') : t('no')) + '</td></tr>';
+            html += '<tr><td><strong>' + t('last_run') + ':</strong></td><td>' + data.lastExecution + '</td></tr>';
+            html += '<tr><td><strong>' + t('script_exists') + ':</strong></td><td>' + (data.scriptExists ? t('yes') : t('no')) + '</td></tr>';
             
             if (data.resolverVersion) {
-                html += '<tr><td><strong>' + t('version') + ':</strong>NonNull<td>' + data.resolverVersion + 'NonNull</tr>';
+                html += '<tr><td><strong>' + t('version') + ':</strong></td><td>' + data.resolverVersion + '</td></tr>';
             }
             
             if (data.cacheItems !== undefined) {
-                html += '<tr><td><strong>' + t('cache_items') + ':</strong>NonNull<td>' + data.cacheItems + 'NonNull</tr>';
+                html += '<tr><td><strong>' + t('cache_items') + ':</strong></td><td>' + data.cacheItems + '</td></tr>';
             }
             
             if (data.scheduledUpdates) {
-                html += '<tr><td><strong>' + t('auto_update') + ':</strong>NonNull<td>' + t('auto_update_active') + ' ' + data.updateInterval + 'NonNull</tr>';
+                html += '<tr><td><strong>' + t('auto_update') + ':</strong></td><td>' + t('auto_update_active') + ' ' + data.updateInterval + 'NonNull</tr>';
             }
             
             if (data.scriptUrl) {
@@ -1111,13 +1110,14 @@ const getViewScripts = (protocol, host) => {
             document.getElementById('loaderOverlay').style.display = 'none';
         }
         
-        function showToast(message, type = 'success') {
+        function showToast(message, type) {
+            if (typeof type === 'undefined') type = 'success';
             const toast = document.getElementById('toast');
             if (toast) {
                 toast.textContent = message;
                 toast.style.backgroundColor = type === 'error' ? '#f44336' : '#4CAF50';
                 toast.style.display = 'block';
-                setTimeout(() => {
+                setTimeout(function() {
                     toast.style.display = 'none';
                 }, 3000);
             } else {
